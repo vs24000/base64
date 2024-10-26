@@ -1,30 +1,23 @@
 ﻿using System;
-//using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 
 class Base64
 {
     static void Main()
-    {
+    {        
         Console.Write("Enter a string: ");
         var str = Console.ReadLine();
 
-          var timer = new Stopwatch();
-          timer.Start();
+        /* -- тест на енкодера */
         var msg = new List<byte>(Encoding.UTF8.GetBytes(str));
-        string r = Base64Encode(msg);
-        Console.WriteLine($"'{r}'");
-          timer.Stop();
-          Console.WriteLine($"MY time = {timer.Elapsed.Microseconds}");
+        string encodedStr = Base64Encode(msg);
+        Console.WriteLine($"'{encodedStr}'");
 
-        timer.Start();
-        var oringinalEncoder = Convert.ToBase64String(Encoding.UTF8.GetBytes(str));
-        Console.WriteLine($"'{oringinalEncoder}'");
-        timer.Stop();
-        Console.WriteLine($"LIB time = {timer.Elapsed.Microseconds}");
-
+        /* -- тест на декодера */
+        string decodedStr = Encoding.UTF8.GetString(Base64Decode(encodedStr).ToArray());
+        Console.WriteLine($"'{decodedStr}'");
     }
 
     const string base64Chars = "АBCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -44,7 +37,6 @@ class Base64
         // за резултата
         var result = new StringBuilder();
         
-
         // чете в групи по три байта, изхода:
         // b1 - съдържа старшите 6 бита от msg[i]
         // b2 - младшите 2 от msg[i] и старшите 4 от msg[i+1]
@@ -77,5 +69,44 @@ class Base64
         }
 
         return result.ToString();
+    }
+
+    static List<byte> Base64Decode(string message)
+    {
+        if (message == null) throw new ArgumentException("Null pointer.");
+        var result = new List<byte>();
+        if (message.Length == 0) return result; // празен списък
+
+        // изчислява padCount и заменя '=' с 'А'
+        int padCount = 0, pEnd = message.Length - 1;
+        while (message[pEnd] == '=') { pEnd--; padCount++; }
+        if (padCount > 0) message = message.Replace('=', 'A');
+
+        for (int i = 0; i < message.Length; i += 4)
+        {
+            int b1 = base64Chars.IndexOf(message[i]);
+            int b2 = base64Chars.IndexOf(message[i + 1]);
+            int b3 = base64Chars.IndexOf(message[i + 2]);
+            int b4 = base64Chars.IndexOf(message[i + 3]);
+
+            byte r1 = (byte)((b1 << 2) | (b2 >> 4));
+            byte r2 = (byte)(((b2 & 0b00001111) << 4) | (b3 >> 2));
+            byte r3 = (byte)(((b3 & 0b00000011) << 6) | b4);
+
+            result.Add(r1);
+            if (b3 != 64)
+            {
+                result.Add(r2);
+            }
+            if (b4 != 64)
+            {
+                result.Add(r3);
+            }
+        }
+
+        // Премахване на добавените байтове
+        result.RemoveRange(result.Count - padCount, padCount);
+
+        return result;
     }
 }
